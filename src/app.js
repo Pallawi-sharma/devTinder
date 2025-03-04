@@ -8,7 +8,6 @@ app.use(express.json());
 
 app.post("/signup", async (req, res) => {
   const user = new User(req.body);
-  console.log(user.email);
   
   try {
     await user.save();
@@ -51,9 +50,9 @@ app.delete("/user", async (req, res) => {
   }
 });
 
-app.patch("/user", async (req, res) => {
+app.patch("/user/:userId", async (req, res) => {
   try {
-    const userId = req.body.userId;
+    const userId = req.params.userId;
     const data = req.body;
 
     const user = await User.findByIdAndUpdate(userId, data, {
@@ -61,7 +60,7 @@ app.patch("/user", async (req, res) => {
     });
     res.send("user updated successfully!!");
   } catch (error) {
-    res.status(400).send("Something wents wrong!!");
+    res.status(400).send("User not updated " + error.message);
   }
 });
 
