@@ -3,10 +3,13 @@ const bcrypt = require("bcrypt");
 const connectDB = require("./config/database.js");
 const User = require("./models/user.js");
 const { validationSignup } = require("./utils/validation.js");
+const cookiesParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
 app.use(express.json());
+app.use(cookiesParser());
 
 app.post("/signup", async (req, res) => {
   try {
@@ -28,24 +31,44 @@ app.post("/signup", async (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
-  try{
-
-      const {email, password} = req.body;
-      const user = await User.findOne({email: email});
-      if(!user){
-        throw new Error("Invalid email")
-      }
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if(isPasswordValid){
-        res.send("Login successfully")
-      }else{
-        throw new Error("Invalid password")
-      }
-
-  }catch (error) {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      throw new Error("Invalid email");
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (isPasswordValid) {
+      const token = jwt.sign({ _id: user._id }, "Pallawi@123");
+      res.cookie("token", token);
+      res.send("Login successfully");
+    } else {
+      throw new Error("Invalid password");
+    }
+  } catch (error) {
     res.status(400).send("Error saving the user:" + error.message);
   }
-})
+});
+
+app.get("/profile", async (req, res) => {
+  try {
+    const cookies = req.cookies;
+    const { token } = cookies;
+    if(!token){
+      throw new Error("Invalid token");
+    }
+    const decodedMessage = jwt.verify(token, "Pallawi@123");
+    const { _id } = decodedMessage;
+    const user = await User.findById(_id);
+    if(!user){
+       throw new Error("User not found");
+    }
+    res.send(user);
+  } catch (error) {
+    res.status(400).send("Error: " + error.message);
+  }
+});
+
 app.get("/user", async (req, res) => {
   try {
     const userEmail = req.body.email;
